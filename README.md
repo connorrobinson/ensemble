@@ -6,7 +6,7 @@ It is intended for use within Jupyter notebooks. This code was written by Connor
 Here are instructions for setting up a conda environment that should allow you to use widgets. If your conda/Jupyter notebook installation is already set up to work with widgets, this step may not be necessary.
 
 ```
-conda create --name ensemble python=3.8.5'
+conda create --name ensemble python=3.8.5
 conda activate ensemble
 conda install numpy
 pip install jupyterlab --upgrade
@@ -17,7 +17,7 @@ jupyter labextension install jupyter-matplotlib
 jupyter labextension install jupyterlab-plotly
 jupyter labextension update --all
 jupyter lab build
-jupyter labextension list'
+jupyter labextension list
 ```
 
 The widget lets you interactively include/exclude stars in all exposures, entire exposures, and stars from individual exposures.
