@@ -229,7 +229,7 @@ class ens():
         
         #Create m and w without any excluded stars or exposures        
         self.resetmw()
-                
+        
         return
     
     def resetmw(self):
@@ -379,7 +379,7 @@ class ens():
         self.err_em = np.zeros(self.ee) + np.nan
         
         self.em[np.where(self.w1)[0]] = em
-        self.m0[np.where(self.w2)[0]] = m0 + self.offset #ADDED THIS, MIGHT NOT WORK
+        self.m0[np.where(self.w2)[0]] = m0 + self.offset
         self.err_em[np.where(self.w1)[0]] = err_em
         self.err_m0[np.where(self.w2)[0]] = err_m0
         
@@ -470,7 +470,7 @@ class ens():
         # AXIS 1
         ########################################
         #Exposure magnitude vs. exposure
-        self.m_vs_exp = self.ax1.errorbar(np.arange(self.ee), self.em, yerr = self.err_em, color = 'k', ecolor = 'r', marker = 'o')
+        self.m_vs_exp = self.ax1.errorbar(np.arange(self.ee), self.em, yerr = self.err_em, color = 'k', ecolor = 'r', marker = 'o', markersize = 2)
         
         #Create a set of blue/red points which indicate if the exposure is being used. These will be turned on/off when you click on them.
         self.x_exp = np.arange(self.ee)
@@ -487,7 +487,7 @@ class ens():
         
         # AXIS 2 -- Exposure magnitude uncertainty vs. exposure
         ########################################
-        self.merr_vs_exp, = self.ax2.plot(np.arange(self.ee), self.err_em, color = 'k', marker = 'o')
+        self.merr_vs_exp, = self.ax2.plot(np.arange(self.ee), self.err_em, color = 'k', marker = 'o', markersize = 2)
         self.ax2.set_xlabel('Exposure', fontsize = 12)
         self.ax2.set_ylabel(r'$\sigma_{em}$', fontsize = 12)
         self.ax2.set_ylim([-0.15, np.nanmax(self.err_em)+0.1])
@@ -511,6 +511,10 @@ class ens():
         #Mark the stars that are to be excluded. This should not actually plot anything.
         self.star_select = np.zeros(self.ss).astype('bool')
         self.star_excl, = self.ax3.plot([], [], color = 'r', marker = 'o', ls = '', zorder = 2, alpha = 0.5)
+        
+        #Mark the stars that have been de-weighted. This will not plot anything at first.
+        self.orig_w4_weight = np.ones(self.ss).astype('bool')
+        self.deweight, = self.ax3.plot([],[], markerfacecolor = 'None', markeredgecolor = 'purple', marker = 'o', ls = '', zorder = 2, alpha = 0.5, markersize = 20)
         
         # AXIS 4 -- em vs sigma em
         ########################################
@@ -559,11 +563,7 @@ class ens():
         ########################################
         if self.index != None:
             self.buildLightCurve()
-#             self.ind_lc, = self.ax8.plot(self.lct, self.lcM, marker = 'o', color = 'k', ls = '', alpha = 0.2, ms = 3)
             self.ind_lc = self.ax8.errorbar(self.lct, self.lcM, yerr = self.lc_err_M, marker = 'o', color = 'k', ls = '', alpha = 0.2, ms = 3, ecolor = 'r')
-            
-            #             self.m_vs_exp = self.ax1.errorbar(np.arange(self.ee), self.em, yerr = self.err_em, color = 'k', ecolor = 'r', marker = 'o')
-            
             
             self.ax8.set_xlabel('Time [d]')
             self.ax8.set_ylabel('Instrumental Magnitude, m');
@@ -621,12 +621,16 @@ class ens():
             #Solve the ensemble again
             self.resetWeights()
             
+            #Reset the markers to show that weights that have been modified
+            self.orig_w4_weight = np.ones(self.ss).astype('bool')
+            
             #Apply the basic exclusion again.
             self.basicExclude()
             
             #Update the figures
             self.update_figure()
             
+
         reset_weights_button.on_click(functools.partial(on_reset_weights_button_clicked, self=self))
         
         #Add a button widget to select a star from panel 3 for plotting
@@ -642,12 +646,25 @@ class ens():
             
         select_star_button.on_click(functools.partial(on_select_star_button_clicked, self=self))
         
-
+        
+        #Add a button widget to select a star to re-weight.
+        weight_star_button = widgets.Button(description='Remove/add weight to star')        
+        
+        def on_weight_star_button_clicked(b, self = self):
+            
+            #Clear any currently selected stars by replotting the figure
+            self.update_figure()
+            
+            #Turn on the choose_star flag (used by __call__)
+            self.weight_star = True
+            
+        weight_star_button.on_click(functools.partial(on_weight_star_button_clicked, self=self))
+        
+        
         ######################################
         # SAVE BUTTON
         ######################################
         #Add a button to save a complete version of the object as a pickle, a .dat file containing the final mask (w1*w2*w3*w4) and a .dat file containg the LC. 
-        
         
         self.save_string = widgets.Text(value = self.save_name, placecolder = 'name', description= 'Save name:', disabled=False)
         save_button = widgets.Button(description='Save Weights/LC')
@@ -669,7 +686,7 @@ class ens():
         save_button.on_click(functools.partial(on_save_button_clicked, self=self))
         
         #Place the buttons into a box and display it
-        box =widgets.HBox([solve_ensemble_button, reset_weights_button, select_star_button, self.save_string, save_button])
+        box =widgets.HBox([solve_ensemble_button, reset_weights_button, select_star_button, weight_star_button, self.save_string, save_button])
         display(box, output)
         
         fig.canvas.draw_idle()
@@ -736,17 +753,26 @@ class ens():
                 selected = np.nanargmin(euc)
             
                 self.index = selected
-                
                 self.buildLightCurve()
+            
+            elif self.weight_star == True:
                 
-                #Construct the light curve
-#                 self.lct = self.time[self.w3[:,self.index].astype('bool')]
-#                 self.lcM = self.M[self.w3[:,self.index].astype('bool'), self.index]
-#                 self.lce, = np.where(self.w3[:,self.index])
-#                 self.lc_select = np.zeros(len(self.lct)).astype('bool')
-                    
+                #Turn of the flag
+                self.weight_star = False
                 
-    
+                #Calculate the euclidian distanc to find the closest point.
+                euc = displayEuclid(self.ax3, self.x, self.y, self.m0, self.err_m0)
+                selected = np.nanargmin(euc)
+                
+                
+                if self.orig_w4_weight[selected] == True:
+                    self.deweightStar(selected)
+                    self.orig_w4_weight[selected] = False
+                else:
+                    self.reweightStar(selected)
+                    self.orig_w4_weight[selected] = True
+                
+            
             else:
                 if self.star_select[selected] == True:
                     self.star_select[selected] = False
@@ -760,7 +786,7 @@ class ens():
                 elif self.star_select[selected] == False:
                     self.star_select[selected] = True
                     self.excludeStar(selected)
-                    
+                
 
         elif event.inaxes == self.ax4:
             euc = displayEuclid(self.ax4, self.x, self.y, self.em, self.err_em)
@@ -769,6 +795,7 @@ class ens():
             if self.exp_select[selected] == True:
                 self.exp_select[selected] = False
                 self.includeExposure(selected)
+                
             elif self.exp_select[selected] == False:
                 self.exp_select[selected] = True
                 self.excludeExposure(selected)
@@ -786,8 +813,6 @@ class ens():
             elif self.lc_select[selected] == False:
                 self.lc_select[selected] = True
                 self.excludeSpecific(self.index, self.lce[selected])
-                
-
             
         #Update the figure
         self.update_figure()    
@@ -834,6 +859,7 @@ class ens():
         self.ax3.set_xlim([np.nanmin(self.m0)-0.1, np.nanmax(self.m0)+0.1])    
         
         self.star_excl.set_data(self.m0[self.star_select], self.err_m0[self.star_select])
+        self.deweight.set_data(self.m0[~self.orig_w4_weight], self.err_m0[~self.orig_w4_weight])
         
         # UPDATE AX 4
         self.em_vs_emerr.set_data(self.em, self.err_em)
@@ -954,7 +980,7 @@ class ens():
         '''
         
         self.w1[ind] = False
-        self.w3[ind,:] = False
+#         self.w3[ind,:] = False
     
     def excludeStar(self, ind):
         '''
@@ -1025,7 +1051,37 @@ class ens():
             Connor Robinson, February 9th, 2021
         '''
         self.w3[eind,sind] = True
+    
+    
+    def deweightStar(self, ind):
+        '''
         
+        PURPOSE:
+            Set the weight of an individual star to a small, but non-zero number.
+            This is useful in the case where your science target is bright.
+            This is applied to all instances of this star in all exposures. 
+            
+        INPUTS:
+            ind: Index of the star to de-weight (0 is the first star)
+        
+        '''
+        
+        self.w4[:,ind] = 1e-20
+    
+    def reweightStar(self, ind):
+        '''
+        
+        PURPOSE:
+            Restore the original weights of a star to their original values
+            This is applied to all instances of this star in all exposures. 
+            
+        INPUTS:
+            ind: Index of the star to de-weight (0 is the first star)
+        
+        '''
+        
+        self.w4[:,ind] = 1/self.imag_err[:,ind]**2
+    
     def resetWeights(self):
         '''
         
@@ -1043,7 +1099,9 @@ class ens():
         self.w1[:] = True
         self.w2[:] = True
         self.w3[:,:] = True
-    
+        self.w4 = 1/self.imag_err**2
+        
+        
     def buildLightCurve(self):
         '''
         
@@ -1126,7 +1184,6 @@ class ens():
         
         np.savetxt(self.save_path + self.save_name+'_mask.dat', w, fmt = '%i')
         
-        
     
     def loadMask(self, maskfile = None):
         '''
@@ -1154,7 +1211,9 @@ class ens():
         self.excludeMissingStars()
         self.excludeMissingExposures()
         
+    
         
+    
         
 #     def saveEnsemble(self):
 #         '''
