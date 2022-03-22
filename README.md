@@ -20,6 +20,14 @@ jupyter lab build
 jupyter labextension list
 ```
 
+If you are creating a new conda environement, you may also need to install a few other third-party modules via:
+
+```
+pip install astropy
+pip install photutils
+pip install scipy
+```
+
 The widget lets you interactively include/exclude stars in all exposures, entire exposures, and stars from individual exposures.
 
 Before running the widget, it is recommended to use the `basicExclude` function to eliminate nans/negative fluxes.
