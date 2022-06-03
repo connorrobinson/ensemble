@@ -1,7 +1,10 @@
 # ensemble
 
 This is an interactive widget implementation of the Honeycutt (1992) inhomogeneous ensemble photometry method which can be used to correct for atmospheric variations when creating light curves via differential photometry.
-It is intended for use within Jupyter lab. This code was written by Connor Robinson and has been used both for research and instructional purposes (in particular, Observational Astronomy (ASTR 341) at Amherst College).
+It is intended for use within Jupyter lab. This code was written by Connor Robinson and has been used both for research and instructional purposes (in particular, Observational Astronomy, ASTR 341, at Amherst College).
+
+If you use this code, please cite Robinson et al. (2022, currently in press) and [Honeycutt (1992)]([https://link-url-here.org](https://ui.adsabs.harvard.edu/abs/1992PSP..104..435H/abstract)).
+
 
 Here are instructions for setting up a conda environment that should allow you to use widgets. If your conda/Jupyter lab installation is already set up to work with widgets, this step may not be necessary.
 
@@ -72,3 +75,4 @@ The entire code is written in an object-oriented sense, so after running the wid
 For example, `ens_obj.M` will give you all of the atmospheric-corrected instrumental magnitudes. 
 
 Similarly, `ens_obj.w3` will give you the matrix of masked exposures/stars/stars in individual exposures. 
+
