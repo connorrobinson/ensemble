@@ -1,9 +1,9 @@
 # ensemble
 
 This is an interactive widget implementation of the Honeycutt (1992) inhomogeneous ensemble photometry method which can be used to correct for atmospheric variations when creating light curves via differential photometry.
-It is intended for use within Jupyter notebooks. This code was written by Connor Robinson and has been used both for research and instructional purposes (in particular, Observational Astronomy (ASTR 341) at Amherst College).
+It is intended for use within Jupyter lab. This code was written by Connor Robinson and has been used both for research and instructional purposes (in particular, Observational Astronomy (ASTR 341) at Amherst College).
 
-Here are instructions for setting up a conda environment that should allow you to use widgets. If your conda/Jupyter notebook installation is already set up to work with widgets, this step may not be necessary.
+Here are instructions for setting up a conda environment that should allow you to use widgets. If your conda/Jupyter lab installation is already set up to work with widgets, this step may not be necessary.
 
 ```
 conda create --name ensemble python=3.8.5
@@ -18,6 +18,14 @@ jupyter labextension install jupyterlab-plotly
 jupyter labextension update --all
 jupyter lab build
 jupyter labextension list
+```
+
+If you are creating a new conda environement, you may also need to install a few other third-party modules via:
+
+```
+pip install astropy
+pip install photutils
+pip install scipy
 ```
 
 The widget lets you interactively include/exclude stars in all exposures, entire exposures, and stars from individual exposures.
