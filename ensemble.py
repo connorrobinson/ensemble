@@ -202,7 +202,7 @@ class ens():
         
         #Add the photometry files, date, snr cutoff, and name to object
         self.photfiles = photfiles
-        self.time = time
+        self.time = np.array(time)
         self.snr_cutoff = snr_cutoff
         self.save_name = save_name
         self.save_path = save_path
@@ -385,7 +385,6 @@ class ens():
         
         
         self.M = (self.imag.T - self.em).T
-#         self.err_M = np.sqrt((self.imag_err**2).T + self.err_em**2).T
         
         self.ss_eff = np.sum(self.w3, axis = 1)
     
@@ -430,8 +429,7 @@ class ens():
         self.excludeMissingExposures()
         
         
-        
-    def plotEnsemble(self, index = None, indicator_size = 3):
+    def plotEnsemble(self, index = None, indicator_size = 3, sizescale = 1):
         '''
         PURPOSE:
             Plots the results from ensembleSolver
@@ -441,8 +439,8 @@ class ens():
 
         OPTIONAL INPUTS:
             index: Index for an individual light curve
-            markersize:[float] Size of the indicators for whether an exposure is excluded or not 
-
+            indicator_size:[float] Size of the indicators for whether an exposure is excluded or not 
+            sizescale:[float] Multiplicative scaling factor to change the size of the widget
 
         AUTHOR:
             Connor Robinson, Dec, 17th, 2020
@@ -451,9 +449,11 @@ class ens():
         #Handle a few things regarding selecting an individual star for plotting
         self.index = index
         self.choose_star = False
+        self.weight_star = False
         
         #Make plots of everything
-        fig, ax = plt.subplots(2,4,figsize = [15,7])
+        dpi = np.int(100 * sizescale)
+        fig, ax = plt.subplots(2,4, figsize = [15,7], dpi = dpi)
         plt.subplots_adjust(hspace = 0.3, wspace = 0.35)
         
         #Define each axis
@@ -465,7 +465,6 @@ class ens():
         self.ax6 = ax[1,1]
         self.ax7 = ax[1,2]
         self.ax8 = ax[1,3]
-        
         
         # AXIS 1
         ########################################
@@ -576,7 +575,8 @@ class ens():
             self.lc_ind_label = self.ax8.text(0.97, 0.97, 'index:'+str(self.index), transform = self.ax8.transAxes, ha = 'right', va = 'top')
             
         else:
-            self.ax8.set_visible(False)     
+            self.ax8.set_visible(False)
+            self.mark_selected.set_data([],[])
         
         #Connect the canvas for mouse clicks
         self.cid = fig.canvas.mpl_connect('button_press_event', self)
@@ -585,8 +585,10 @@ class ens():
         #BUTTONS
         ######################################
         
+        layout = widgets.Layout(height='auto', width='auto')
+        
         #Add a button widget to recalculate the solution and update the figures.
-        solve_ensemble_button = widgets.Button(description='Re-calculate Solution')
+        solve_ensemble_button = widgets.Button(description='Re-calculate Solution', layout = layout)
         output = widgets.Output()
         
         def on_solve_ensemble_button_clicked(b, self = self):            
@@ -598,16 +600,21 @@ class ens():
             #Solve the ensemble again
             self.solveEnsemble()
             
+            #Rebuild the light curve if an object is selected.
+            if self.index != None:
+                #Check if the one of the deleted stars
+                
+                if self.index in np.arange(0,self.ss)[self.star_select]:
+                    self.index = None
+                else:
+                    self.buildLightCurve()
+            
+            
             #Clear the selected stars
             self.star_select = np.zeros(self.ss).astype('bool')
             
             #Clear the selected exposures 
             self.exp_select = np.zeros(self.ee).astype('bool')
-            
-            #Rebuild the light curve if an object is selected.
-            if self.index != None:
-                self.buildLightCurve()
-            
             
             #Update the figures
             self.update_figure()
@@ -615,7 +622,7 @@ class ens():
         solve_ensemble_button.on_click(functools.partial(on_solve_ensemble_button_clicked, self=self))
         
         #Add a button widget to reset all of the weights
-        reset_weights_button = widgets.Button(description='Reset weights')
+        reset_weights_button = widgets.Button(description='Reset weights', layout = layout)
         
         def on_reset_weights_button_clicked(b, self = self):
             #Solve the ensemble again
@@ -634,7 +641,7 @@ class ens():
         reset_weights_button.on_click(functools.partial(on_reset_weights_button_clicked, self=self))
         
         #Add a button widget to select a star from panel 3 for plotting
-        select_star_button = widgets.Button(description='Select Star from Panel 3')        
+        select_star_button = widgets.Button(description='Select Star from Panel 3', layout = layout)   
         
         def on_select_star_button_clicked(b, self = self):
             
@@ -648,7 +655,7 @@ class ens():
         
         
         #Add a button widget to select a star to re-weight.
-        weight_star_button = widgets.Button(description='Remove/add weight to star')        
+        weight_star_button = widgets.Button(description='Remove/add weight to star', layout = layout)        
         
         def on_weight_star_button_clicked(b, self = self):
             
@@ -664,10 +671,10 @@ class ens():
         ######################################
         # SAVE BUTTON
         ######################################
-        #Add a button to save a complete version of the object as a pickle, a .dat file containing the final mask (w1*w2*w3*w4) and a .dat file containg the LC. 
+        #Add a button to save a .dat file containing the final mask (w1*w2*w3) and the final light curve (if an index is selected)
         
         self.save_string = widgets.Text(value = self.save_name, placecolder = 'name', description= 'Save name:', disabled=False)
-        save_button = widgets.Button(description='Save Weights/LC')
+        save_button = widgets.Button(description='Save Weights/LC', layout = layout)
         
         def on_save_button_clicked(b, self = self):
             
@@ -686,7 +693,7 @@ class ens():
         save_button.on_click(functools.partial(on_save_button_clicked, self=self))
         
         #Place the buttons into a box and display it
-        box =widgets.HBox([solve_ensemble_button, reset_weights_button, select_star_button, weight_star_button, self.save_string, save_button])
+        box = widgets.HBox([solve_ensemble_button, reset_weights_button, select_star_button, weight_star_button, self.save_string, save_button], flex_flow='flex-wrap')
         display(box, output)
         
         fig.canvas.draw_idle()
@@ -915,6 +922,10 @@ class ens():
             
             #Add the index
             self.lc_ind_label = self.ax8.text(0.97, 0.97, 'index:'+str(self.index), transform = self.ax8.transAxes, ha = 'right', va = 'top')
+
+        else:
+            self.ax8.set_visible(False)
+            self.mark_selected.set_data([],[])
             
         
     def snrExclude(self, snr):
@@ -980,7 +991,6 @@ class ens():
         '''
         
         self.w1[ind] = False
-#         self.w3[ind,:] = False
     
     def excludeStar(self, ind):
         '''
@@ -1210,9 +1220,7 @@ class ens():
         self.w3 = mask
         self.excludeMissingStars()
         self.excludeMissingExposures()
-        
-    
-        
+         
     
         
 #     def saveEnsemble(self):
