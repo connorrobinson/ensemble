@@ -76,3 +76,6 @@ For example, `ens_obj.M` will give you all of the atmospheric-corrected instrume
 
 Similarly, `ens_obj.w3` will give you the matrix of masked exposures/stars/stars in individual exposures. 
 
+
+### Note that using this solution introduces an arbitrary zeropoint (in addition to the typical zeropoint) that you will need to correct for in order to place your photometry into an absolute scale.
+
